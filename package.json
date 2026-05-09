@@ -1,0 +1,29 @@
+{
+  "name": "@dreplyai/nuxt-admin-module",
+  "version": "0.1.0",
+  "private": false,
+  "type": "module",
+  "description": "Reusable Nuxt admin overlays for DreplyAI services. Consumed as a Nuxt layer by host admin frontends (flowdsl/admin, redelay/admin, …) extending js-admin-nuxt4.",
+  "main": "./nuxt.config.ts",
+  "files": [
+    "modules",
+    "plugins",
+    "components",
+    "composables",
+    "stores",
+    "middleware",
+    "layouts",
+    "server",
+    "nuxt.config.ts",
+    "README.md",
+    "LICENSE"
+  ],
+  "peerDependencies": {
+    "nuxt": "^4.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/DreplyAI/nuxt-admin-module.git"
+  },
+  "license": "MIT"
+}
