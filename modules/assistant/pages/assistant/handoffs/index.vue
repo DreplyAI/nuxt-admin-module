@@ -62,27 +62,14 @@ onMounted(() => load())
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
-      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-3 sm:mb-4">
-        <div class="min-w-0">
-          <h1 class="text-xl sm:text-2xl font-bold">Handoff Inbox</h1>
-          <p class="hidden sm:block text-sm text-gray-600 dark:text-gray-400 mt-1">
-            User requests to talk to a human. Transition status as you process them — notes are stored alongside.
-          </p>
-        </div>
-        <UButton
-          color="neutral"
-          variant="outline"
-          icon="i-heroicons-chat-bubble-left-right"
-          to="/assistant/chats"
-          class="flex-shrink-0"
-        >
-          Conversations
-        </UButton>
-      </div>
-
-      <nav class="flex flex-wrap gap-1 -mx-1">
+  <AdminPage title="Handoffs" description="Visitors who asked for a person — take one over, then resolve it.">
+    <template #actions>
+      <UButton color="neutral" variant="outline" icon="i-lucide-messages-square" to="/assistant/chats" size="sm">
+        Conversations
+      </UButton>
+    </template>
+    <template #toolbar>
+      <nav class="flex gap-1">
         <button
           v-for="s in statuses"
           :key="s.value"
@@ -90,16 +77,15 @@ onMounted(() => load())
           class="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-sm font-medium transition-colors"
           :class="s.value === activeStatus
             ? 'bg-primary text-white'
-            : 'text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700/60'"
+            : 'text-default hover:bg-elevated'"
           @click="switchStatus(s.value)"
         >
           <UIcon :name="s.icon" class="w-4 h-4" />
           <span>{{ s.label }}</span>
         </button>
       </nav>
-    </header>
+    </template>
 
-    <main class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
       <div class="max-w-5xl mx-auto space-y-4">
         <UAlert v-if="errorMsg" color="error" variant="subtle" :title="errorMsg" />
 
@@ -121,16 +107,16 @@ onMounted(() => load())
         <!-- :ui shape changed between Nuxt UI v3 → v4; cast to bypass
              the schema drift. Behaviour-equivalent at runtime. -->
         <UCard v-else :ui="{ body: { padding: 'p-0 sm:p-0' } } as any">
-          <div class="divide-y divide-gray-200 dark:divide-gray-800">
+          <div class="divide-y divide-default">
             <NuxtLink
               v-for="h in items"
               :key="h.id"
               :to="`/assistant/handoffs/${encodeURIComponent(h.id)}`"
-              class="block px-4 py-3 sm:px-5 sm:py-4 hover:bg-gray-50 dark:hover:bg-gray-900/30 transition-colors"
+              class="block px-4 py-3 sm:px-5 sm:py-4 hover:bg-muted transition-colors"
             >
               <div class="flex items-start justify-between gap-3 mb-1">
                 <div class="flex items-center gap-2 min-w-0 flex-wrap">
-                  <span class="font-medium text-gray-900 dark:text-white truncate">
+                  <span class="font-medium text-highlighted dark:text-white truncate">
                     {{ h.email || h.userId || '(anonymous)' }}
                   </span>
                   <UBadge
@@ -140,14 +126,14 @@ onMounted(() => load())
                     size="xs"
                   />
                 </div>
-                <span class="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0 whitespace-nowrap">
+                <span class="text-xs text-muted flex-shrink-0 whitespace-nowrap">
                   {{ formatDate(h.created_at) }}
                 </span>
               </div>
-              <p v-if="h.reason" class="text-sm text-gray-700 dark:text-gray-300 truncate mb-1">
+              <p v-if="h.reason" class="text-sm text-default truncate mb-1">
                 {{ h.reason }}
               </p>
-              <p class="text-xs text-gray-500 dark:text-gray-400 flex gap-3 flex-wrap">
+              <p class="text-xs text-muted flex gap-3 flex-wrap">
                 <span v-if="h.phone">phone: {{ h.phone }}</span>
                 <span v-if="h.contactedBy">contacted by: {{ h.contactedBy }}</span>
                 <span v-if="h.contactedAt">at: {{ formatDate(h.contactedAt) }}</span>
@@ -162,6 +148,5 @@ onMounted(() => load())
           </UButton>
         </div>
       </div>
-    </main>
-  </div>
+  </AdminPage>
 </template>

@@ -87,11 +87,11 @@ onMounted(load)
 <template>
   <ClientOnly>
     <div class="flex-1 flex flex-col overflow-hidden">
-      <header class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-4">
+      <header class="flex-shrink-0 bg-default border-b border-default px-4 sm:px-6 py-4">
         <div class="max-w-5xl mx-auto flex items-start justify-between gap-4">
           <div>
             <h1 class="text-xl sm:text-2xl font-bold">Assistant Templates</h1>
-            <p class="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <p class="text-sm text-muted mt-1">
               Starters for new assistant flows. Pick one, name your flow, then route traffic to it via a
               <NuxtLink to="/flows/deployments" class="text-primary-600 hover:underline">deployment variant</NuxtLink>.
             </p>
@@ -137,12 +137,12 @@ onMounted(load)
                     variant="subtle"
                     size="xs"
                   />
-                  <span class="font-mono text-[11px] text-gray-400 dark:text-gray-500">{{ t.id }}</span>
+                  <span class="font-mono text-[11px] text-dimmed">{{ t.id }}</span>
                 </div>
-                <h2 class="text-base font-semibold text-gray-900 dark:text-white truncate">
+                <h2 class="text-base font-semibold text-highlighted dark:text-white truncate">
                   {{ t.name || t.id }}
                 </h2>
-                <p v-if="t.description" class="text-sm text-gray-600 dark:text-gray-300 mt-1 leading-relaxed">
+                <p v-if="t.description" class="text-sm text-toned mt-1 leading-relaxed">
                   {{ t.description }}
                 </p>
               </div>
@@ -183,7 +183,7 @@ onMounted(load)
     </div>
 
     <template #fallback>
-      <div class="flex-1 flex items-center justify-center p-6 text-sm text-gray-500">
+      <div class="flex-1 flex items-center justify-center p-6 text-sm text-muted">
         Loading templates…
       </div>
     </template>
