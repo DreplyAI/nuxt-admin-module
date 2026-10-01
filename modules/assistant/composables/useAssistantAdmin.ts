@@ -7,6 +7,7 @@ import type {
   AssistantChat,
   AssistantChatDetail,
   AssistantHandoff,
+  ChatListPage,
   ChatListFilters,
   CursorPage,
   HandoffListFilters,
@@ -42,8 +43,8 @@ export function useAssistantAdmin() {
     return s ? `?${s}` : ''
   }
 
-  async function listChats(filters: ChatListFilters = {}): Promise<CursorPage<AssistantChat>> {
-    return $apiFetch<CursorPage<AssistantChat>>(
+  async function listChats(filters: ChatListFilters = {}): Promise<ChatListPage> {
+    return $apiFetch<ChatListPage>(
       `/api/v1/admin/assistant/chats${qs(withTenant(filters) as Record<string, any>)}`,
     )
   }

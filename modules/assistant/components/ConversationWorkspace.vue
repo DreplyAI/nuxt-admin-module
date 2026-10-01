@@ -32,7 +32,9 @@ const { listChats, getChat, listHandoffs, patchHandoff } = useAssistantAdmin()
 const chats = ref<AssistantChat[]>([])
 const handoffs = ref<AssistantHandoff[]>([])
 const nextCursor = ref<string | undefined>()
-const total = ref<number | undefined>() // across all pages, from the API
+const total = ref<number | undefined>() // this tab, across all pages, from the API
+const serverCounts = ref<Record<string, number> | undefined>() // every tab, from the API
+const handoffStatus = ref<Record<string, HandoffStatus>>({}) // by chat id
 const loadingList = ref(true)
 const listError = ref<string | null>(null)
 const search = ref('')
@@ -43,13 +45,18 @@ async function loadList(cursor?: string) {
   listError.value = null
   try {
     const [c, h] = await Promise.all([
-      listChats({ limit: 50, cursor }),
+      listChats({ limit: 50, cursor, view: tab.value }),
       cursor ? Promise.resolve(null) : listHandoffs({ limit: 200 }).catch(() => null),
     ])
     chats.value = cursor ? [...chats.value, ...(c.items || [])] : (c.items || [])
     nextCursor.value = c.nextCursor
-    if (!cursor) total.value = typeof c.total === 'number' ? c.total : undefined
+    if (!cursor) {
+      total.value = typeof c.total === 'number' ? c.total : undefined
+      serverCounts.value = c.counts
+    }
     if (h) handoffs.value = h.items || []
+    mergeHandoffs(c.handoffs)
+    handoffStatus.value = { ...(cursor ? handoffStatus.value : {}), ...(c.handoffStatus || {}) }
     syncNavCounts()
   } catch (e: any) {
     listError.value = e?.data?.detail || e?.message || 'Could not load conversations'
@@ -58,12 +65,35 @@ async function loadList(cursor?: string) {
   }
 }
 
+// The page's own handoffs (any status) join the pending ones loaded above —
+// the detail pane and the badges of taken/resolved chats need them.
+function mergeHandoffs(list?: AssistantHandoff[]) {
+  if (!list?.length) return
+  const byId = new Map(handoffs.value.map(h => [h.id, h]))
+  for (const h of list) byId.set(h.id, { ...byId.get(h.id), ...h })
+  handoffs.value = [...byId.values()]
+}
+
+// Tabs are filtered server-side: switching reloads that tab's list.
+watch(tab, () => loadList())
+
+// After a handoff changes, re-read the counts (one row is enough).
+async function refreshCounts() {
+  try {
+    const c = await listChats({ limit: 1, view: tab.value })
+    if (c.counts) serverCounts.value = c.counts
+    if (typeof c.total === 'number') total.value = c.total
+    syncNavCounts()
+  } catch { /* the old numbers stay */ }
+}
+
 // The menu shows live counts (useNavBadges, base layer); this screen has the
 // freshest numbers, so it updates them. The conversation total comes from the
 // API; without one, only when the whole list is loaded (a partial count lies).
 const navBadges = useNavBadges()
 function syncNavCounts() {
-  if (total.value !== undefined) navBadges.set('/assistant/chats', total.value > 99 ? '99+' : total.value)
+  const all = serverCounts.value?.all ?? (tab.value === 'all' ? total.value : undefined)
+  if (all !== undefined) navBadges.set('/assistant/chats', all > 99 ? '99+' : all)
   else if (!nextCursor.value) navBadges.set('/assistant/chats', chats.value.length)
   navBadges.set('/assistant/handoffs', handoffs.value.filter(h => h.status === 'pending').length)
 }
@@ -80,10 +110,10 @@ const STATUS: Record<Status, { label: string, color: 'warning' | 'info' | 'succe
   noanswer: { label: 'No answer', color: 'neutral' },
 }
 function statusOf(c: AssistantChat): Status {
-  const h = handoffFor(c)
-  if (h?.status === 'pending') return 'waiting'
-  if (h?.status === 'contacted') return 'taken'
-  if (h?.status === 'resolved') return 'resolved'
+  const st = handoffFor(c)?.status ?? handoffStatus.value[c.id]
+  if (st === 'pending') return 'waiting'
+  if (st === 'contacted') return 'taken'
+  if (st === 'resolved') return 'resolved'
   return (c.messages || []).some(m => m.role === 'assistant') ? 'answered' : 'noanswer'
 }
 const firstUser = (c: AssistantChat) => c.messages?.find(m => m.role === 'user')?.content || '(no question)'
@@ -94,11 +124,13 @@ const pagePath = (c: AssistantChat) => {
   try { return new URL(p).pathname } catch { return p }
 }
 
+const local = (n: number) => (n && nextCursor.value ? `${n}+` : n)
 const counts = computed(() => ({
-  // the API total; an older API without one → "50+" while pages remain
-  all: total.value ?? (nextCursor.value ? `${chats.value.length}+` : chats.value.length),
-  handoffs: chats.value.filter(c => ['waiting', 'taken'].includes(statusOf(c))).length,
-  noanswer: chats.value.filter(c => statusOf(c) === 'noanswer').length,
+  // exact per-tab counts from the API; an older API → what is loaded,
+  // with "+" while more pages remain
+  all: serverCounts.value?.all ?? total.value ?? local(chats.value.length),
+  handoffs: serverCounts.value?.handoffs ?? local(chats.value.filter(c => ['waiting', 'taken'].includes(statusOf(c))).length),
+  noanswer: serverCounts.value?.noanswer ?? local(chats.value.filter(c => statusOf(c) === 'noanswer').length),
 }))
 const tabs = computed(() => [
   { label: 'All', value: 'all', badge: counts.value.all || undefined },
@@ -171,7 +203,7 @@ async function setStatus(s: HandoffStatus) {
   try {
     const updated = await patchHandoff(handoff.value.id, { status: s })
     handoffs.value = handoffs.value.map(h => (h.id === updated.id ? { ...h, ...updated } : h))
-    syncNavCounts()
+    void refreshCounts()
     toast.add({ title: s === 'resolved' ? 'Marked as resolved' : s === 'contacted' ? 'Marked as taken over' : 'Updated', color: 'success' })
   } catch (e: any) {
     toast.add({ title: 'Not saved', description: e?.data?.detail || e?.message, color: 'error' })
