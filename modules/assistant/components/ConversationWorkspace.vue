@@ -32,6 +32,7 @@ const { listChats, getChat, listHandoffs, patchHandoff } = useAssistantAdmin()
 const chats = ref<AssistantChat[]>([])
 const handoffs = ref<AssistantHandoff[]>([])
 const nextCursor = ref<string | undefined>()
+const total = ref<number | undefined>() // across all pages, from the API
 const loadingList = ref(true)
 const listError = ref<string | null>(null)
 const search = ref('')
@@ -47,6 +48,7 @@ async function loadList(cursor?: string) {
     ])
     chats.value = cursor ? [...chats.value, ...(c.items || [])] : (c.items || [])
     nextCursor.value = c.nextCursor
+    if (!cursor) total.value = typeof c.total === 'number' ? c.total : undefined
     if (h) handoffs.value = h.items || []
     syncNavCounts()
   } catch (e: any) {
@@ -57,11 +59,12 @@ async function loadList(cursor?: string) {
 }
 
 // The menu shows live counts (useNavBadges, base layer); this screen has the
-// freshest numbers, so it updates them. The conversation total only when the
-// whole list is loaded (no further page) — a partial count would be wrong.
+// freshest numbers, so it updates them. The conversation total comes from the
+// API; without one, only when the whole list is loaded (a partial count lies).
 const navBadges = useNavBadges()
 function syncNavCounts() {
-  if (!nextCursor.value) navBadges.set('/assistant/chats', chats.value.length)
+  if (total.value !== undefined) navBadges.set('/assistant/chats', total.value > 99 ? '99+' : total.value)
+  else if (!nextCursor.value) navBadges.set('/assistant/chats', chats.value.length)
   navBadges.set('/assistant/handoffs', handoffs.value.filter(h => h.status === 'pending').length)
 }
 
@@ -92,7 +95,8 @@ const pagePath = (c: AssistantChat) => {
 }
 
 const counts = computed(() => ({
-  all: chats.value.length,
+  // the API total; an older API without one → "50+" while pages remain
+  all: total.value ?? (nextCursor.value ? `${chats.value.length}+` : chats.value.length),
   handoffs: chats.value.filter(c => ['waiting', 'taken'].includes(statusOf(c))).length,
   noanswer: chats.value.filter(c => statusOf(c) === 'noanswer').length,
 }))

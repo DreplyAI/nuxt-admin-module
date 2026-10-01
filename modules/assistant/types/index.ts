@@ -84,6 +84,8 @@ export interface HandoffPatch {
 export interface CursorPage<T> {
   items: T[]
   nextCursor?: string
+  /** every matching record across pages (first page only, newer APIs) */
+  total?: number
 }
 
 /**
