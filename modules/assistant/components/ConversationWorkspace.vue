@@ -20,7 +20,7 @@
 import { useAssistantAdmin } from '../composables/useAssistantAdmin'
 import type { AssistantChat, AssistantChatDetail, AssistantHandoff, HandoffStatus } from '../types'
 
-interface Source { title: string, url?: string, score?: number, snippet?: string }
+interface Source { title: string, url?: string, path?: string, score?: number, snippet?: string }
 type Msg = { role: string, content: string, timestamp?: string, sources?: Source[] }
 
 const route = useRoute()
@@ -48,11 +48,21 @@ async function loadList(cursor?: string) {
     chats.value = cursor ? [...chats.value, ...(c.items || [])] : (c.items || [])
     nextCursor.value = c.nextCursor
     if (h) handoffs.value = h.items || []
+    syncNavCounts()
   } catch (e: any) {
     listError.value = e?.data?.detail || e?.message || 'Could not load conversations'
   } finally {
     loadingList.value = false
   }
+}
+
+// The menu shows live counts (useNavBadges, base layer); this screen has the
+// freshest numbers, so it updates them. The conversation total only when the
+// whole list is loaded (no further page) — a partial count would be wrong.
+const navBadges = useNavBadges()
+function syncNavCounts() {
+  if (!nextCursor.value) navBadges.set('/assistant/chats', chats.value.length)
+  navBadges.set('/assistant/handoffs', handoffs.value.filter(h => h.status === 'pending').length)
 }
 
 const handoffFor = (c: { sessionId?: string, handoffId?: string }) =>
@@ -157,6 +167,7 @@ async function setStatus(s: HandoffStatus) {
   try {
     const updated = await patchHandoff(handoff.value.id, { status: s })
     handoffs.value = handoffs.value.map(h => (h.id === updated.id ? { ...h, ...updated } : h))
+    syncNavCounts()
     toast.add({ title: s === 'resolved' ? 'Marked as resolved' : s === 'contacted' ? 'Marked as taken over' : 'Updated', color: 'success' })
   } catch (e: any) {
     toast.add({ title: 'Not saved', description: e?.data?.detail || e?.message, color: 'error' })
@@ -341,9 +352,18 @@ onMounted(async () => {
                   />
                   <!-- what the answer was grounded on, when the backend records it -->
                   <div v-if="m.sources?.length" class="ms-11 mt-2 flex flex-wrap gap-1.5">
-                    <UBadge v-for="(s, si) in m.sources" :key="si" color="neutral" variant="outline" size="sm" icon="i-lucide-file-text">
-                      {{ s.title }}<span v-if="s.score != null" class="ms-1 tabular-nums text-dimmed">{{ s.score.toFixed(2) }}</span>
-                    </UBadge>
+                    <component
+                      :is="s.url ? 'a' : 'span'"
+                      v-for="(s, si) in m.sources"
+                      :key="si"
+                      v-bind="s.url ? { href: s.url, target: '_blank', rel: 'noopener' } : {}"
+                      :title="s.url || s.title"
+                      class="inline-flex"
+                    >
+                      <UBadge color="neutral" variant="outline" size="sm" icon="i-lucide-file-text" :trailing-icon="s.url ? 'i-lucide-arrow-up-right' : undefined" :class="s.url ? 'cursor-pointer hover:bg-elevated' : ''">
+                        {{ s.title || s.path || s.url }}<span v-if="s.score != null" class="ms-1 tabular-nums text-dimmed">{{ s.score.toFixed(2) }}</span>
+                      </UBadge>
+                    </component>
                   </div>
                   <p class="mt-1 text-xs text-dimmed" :class="m.role === 'user' ? 'text-right' : 'ms-11'">
                     {{ m.role === 'user' ? 'Visitor' : 'Assistant' }}<template v-if="m.timestamp"> · {{ time(m.timestamp) }}</template>
@@ -379,13 +399,23 @@ onMounted(async () => {
             <h3 class="text-sm font-semibold text-highlighted">Sources used</h3>
             <span class="text-xs text-muted">{{ sourcesUsed.length }}</span>
           </div>
-          <div v-for="(s, i) in sourcesUsed" :key="i" class="rounded-lg border border-default p-3">
+          <component
+            :is="s.url ? 'a' : 'div'"
+            v-for="(s, i) in sourcesUsed"
+            :key="i"
+            v-bind="s.url ? { href: s.url, target: '_blank', rel: 'noopener' } : {}"
+            class="group block rounded-lg border border-default p-3"
+            :class="s.url ? 'transition-colors hover:border-accented hover:bg-elevated/50' : ''"
+          >
             <div class="flex items-start justify-between gap-2">
-              <p class="text-sm font-medium text-highlighted">{{ i + 1 }}. {{ s.title }}</p>
+              <p class="text-sm font-medium text-highlighted">{{ i + 1 }}. {{ s.title || s.path || s.url }}</p>
               <span v-if="s.score != null" class="shrink-0 text-xs tabular-nums text-muted">{{ s.score.toFixed(2) }}</span>
             </div>
             <p v-if="s.snippet" class="mt-1 line-clamp-3 text-xs text-muted">{{ s.snippet }}</p>
-          </div>
+            <p v-if="s.url" class="mt-1 inline-flex max-w-full items-center gap-1 truncate text-xs text-muted group-hover:text-primary">
+              <span class="truncate">{{ s.url.replace(/^https?:\/\//, '') }}</span><UIcon name="i-lucide-arrow-up-right" class="size-3 shrink-0" />
+            </p>
+          </component>
         </div>
 
         <h3 class="text-sm font-semibold text-highlighted">Details</h3>
