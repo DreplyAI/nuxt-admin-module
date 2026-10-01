@@ -1,6 +1,6 @@
 {
   "name": "@dreplyai/nuxt-admin-module",
-  "version": "0.1.0",
+  "version": "0.2.5",
   "private": false,
   "type": "module",
   "description": "Reusable Nuxt admin overlays for DreplyAI services. Consumed as a Nuxt layer by host admin frontends (flowdsl/admin, redelay/admin, …) extending js-admin-nuxt4.",

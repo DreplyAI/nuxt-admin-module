@@ -90,28 +90,17 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="flex-1 flex flex-col overflow-hidden">
-    <header class="flex-shrink-0 bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 px-4 sm:px-6 py-3 sm:py-4">
-      <div class="flex items-center gap-3">
-        <UButton color="neutral" variant="ghost" icon="i-heroicons-arrow-left" size="sm" to="/assistant/handoffs" />
-        <div class="flex-1 min-w-0">
-          <h1 class="text-base sm:text-xl font-semibold truncate">
-            {{ handoff?.email || handoff?.userId || '(anonymous)' }}
-          </h1>
-          <p class="text-xs font-mono text-gray-500 dark:text-gray-400 truncate">{{ handoffId }}</p>
-        </div>
-        <UBadge
-          v-if="handoff"
-          :label="handoff.status"
-          :color="statusColor"
-          variant="subtle"
-          size="lg"
-          class="flex-shrink-0"
-        />
-      </div>
-    </header>
+  <AdminPage :title="handoff?.email || handoff?.userId || 'Anonymous visitor'" description="Contact them, keep notes, and move the request along." back="/assistant/handoffs">
+    <template #actions>
+      <UBadge
+        v-if="handoff"
+        :label="handoff.status"
+        :color="statusColor"
+        variant="subtle"
+        class="capitalize"
+      />
+    </template>
 
-    <main class="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6">
       <div class="max-w-4xl mx-auto space-y-5">
         <UAlert v-if="errorMsg" color="error" variant="subtle" :title="errorMsg" />
 
@@ -128,7 +117,7 @@ onMounted(load)
                 <NuxtLink
                   v-if="handoff.chatId"
                   :to="`/assistant/chats/${encodeURIComponent(handoff.chatId)}`"
-                  class="text-xs text-primary-600 dark:text-primary-400 hover:underline"
+                  class="text-xs text-primary hover:underline"
                 >
                   View full chat →
                 </NuxtLink>
@@ -136,31 +125,31 @@ onMounted(load)
             </template>
             <dl class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
               <div>
-                <dt class="text-xs text-gray-500 uppercase tracking-wide">Email</dt>
+                <dt class="text-xs text-muted uppercase tracking-wide">Email</dt>
                 <dd class="break-all">{{ handoff.email || '—' }}</dd>
               </div>
               <div>
-                <dt class="text-xs text-gray-500 uppercase tracking-wide">Phone</dt>
+                <dt class="text-xs text-muted uppercase tracking-wide">Phone</dt>
                 <dd>{{ handoff.phone || '—' }}</dd>
               </div>
               <div>
-                <dt class="text-xs text-gray-500 uppercase tracking-wide">User ID</dt>
+                <dt class="text-xs text-muted uppercase tracking-wide">User ID</dt>
                 <dd class="font-mono text-xs">{{ handoff.userId || '—' }}</dd>
               </div>
               <div>
-                <dt class="text-xs text-gray-500 uppercase tracking-wide">Priority</dt>
+                <dt class="text-xs text-muted uppercase tracking-wide">Priority</dt>
                 <dd>{{ handoff.priority || 'normal' }}</dd>
               </div>
               <div>
-                <dt class="text-xs text-gray-500 uppercase tracking-wide">Requested</dt>
+                <dt class="text-xs text-muted uppercase tracking-wide">Requested</dt>
                 <dd>{{ formatDate(handoff.created_at) }}</dd>
               </div>
               <div>
-                <dt class="text-xs text-gray-500 uppercase tracking-wide">Contacted</dt>
+                <dt class="text-xs text-muted uppercase tracking-wide">Contacted</dt>
                 <dd>{{ formatDate(handoff.contactedAt) }}<span v-if="handoff.contactedBy"> by {{ handoff.contactedBy }}</span></dd>
               </div>
               <div class="sm:col-span-2">
-                <dt class="text-xs text-gray-500 uppercase tracking-wide">Reason</dt>
+                <dt class="text-xs text-muted uppercase tracking-wide">Reason</dt>
                 <dd class="whitespace-pre-wrap">{{ handoff.reason || '—' }}</dd>
               </div>
             </dl>
@@ -170,7 +159,7 @@ onMounted(load)
             <template #header>
               <h2 class="text-base font-semibold">Captured transcript</h2>
             </template>
-            <pre class="text-xs bg-gray-50 dark:bg-gray-900/40 rounded-md p-3 overflow-x-auto whitespace-pre-wrap font-mono">{{ handoff.transcript }}</pre>
+            <pre class="text-xs bg-muted rounded-md p-3 overflow-x-auto whitespace-pre-wrap font-mono">{{ handoff.transcript }}</pre>
           </UCard>
 
           <UCard>
@@ -234,6 +223,5 @@ onMounted(load)
           </UCard>
         </template>
       </div>
-    </main>
-  </div>
+  </AdminPage>
 </template>

@@ -66,6 +66,20 @@ export interface ChatListFilters {
   variantLabel?: string
   limit?: number
   cursor?: string
+  /** a Conversations tab, filtered server-side (go-assistant ≥ v0.3.5) */
+  view?: 'all' | 'handoffs' | 'noanswer'
+  /** text in any message (go-assistant ≥ v0.3.6) */
+  q?: string
+}
+
+/** GET /admin/assistant/chats — counts + the page's handoffs on newer APIs. */
+export interface ChatListPage extends CursorPage<AssistantChat> {
+  /** chats per view (all / handoffs / noanswer); first page only */
+  counts?: Record<string, number>
+  /** the handoffs of this page's chats */
+  handoffs?: AssistantHandoff[]
+  /** each chat's handoff status, by chat id */
+  handoffStatus?: Record<string, HandoffStatus>
 }
 
 export interface HandoffListFilters {
@@ -84,6 +98,8 @@ export interface HandoffPatch {
 export interface CursorPage<T> {
   items: T[]
   nextCursor?: string
+  /** every matching record across pages (first page only, newer APIs) */
+  total?: number
 }
 
 /**
