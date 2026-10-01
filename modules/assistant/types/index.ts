@@ -68,6 +68,8 @@ export interface ChatListFilters {
   cursor?: string
   /** a Conversations tab, filtered server-side (go-assistant ≥ v0.3.5) */
   view?: 'all' | 'handoffs' | 'noanswer'
+  /** text in any message (go-assistant ≥ v0.3.6) */
+  q?: string
 }
 
 /** GET /admin/assistant/chats — counts + the page's handoffs on newer APIs. */

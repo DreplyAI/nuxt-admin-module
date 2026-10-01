@@ -40,14 +40,21 @@ const listError = ref<string | null>(null)
 const search = ref('')
 const tab = ref<'all' | 'handoffs' | 'noanswer'>('all')
 
+// Search runs server-side over the whole tab (go-assistant ≥ v0.3.6);
+// the local filter below still narrows the loaded rows on older APIs.
+const query = () => search.value.trim() || undefined
+let listSeq = 0 // a newer load (typing, tab switch) wins over a slower older one
+
 async function loadList(cursor?: string) {
+  const seq = ++listSeq
   loadingList.value = !cursor
   listError.value = null
   try {
     const [c, h] = await Promise.all([
-      listChats({ limit: 50, cursor, view: tab.value }),
+      listChats({ limit: 50, cursor, view: tab.value, q: query() }),
       cursor ? Promise.resolve(null) : listHandoffs({ limit: 200 }).catch(() => null),
     ])
+    if (seq !== listSeq) return
     chats.value = cursor ? [...chats.value, ...(c.items || [])] : (c.items || [])
     nextCursor.value = c.nextCursor
     if (!cursor) {
@@ -59,9 +66,10 @@ async function loadList(cursor?: string) {
     handoffStatus.value = { ...(cursor ? handoffStatus.value : {}), ...(c.handoffStatus || {}) }
     syncNavCounts()
   } catch (e: any) {
+    if (seq !== listSeq) return
     listError.value = e?.data?.detail || e?.message || 'Could not load conversations'
   } finally {
-    loadingList.value = false
+    if (seq === listSeq) loadingList.value = false
   }
 }
 
@@ -76,11 +84,17 @@ function mergeHandoffs(list?: AssistantHandoff[]) {
 
 // Tabs are filtered server-side: switching reloads that tab's list.
 watch(tab, () => loadList())
+let searchTimer: ReturnType<typeof setTimeout> | undefined
+watch(search, () => {
+  clearTimeout(searchTimer)
+  searchTimer = setTimeout(() => loadList(), 300)
+})
+onBeforeUnmount(() => clearTimeout(searchTimer))
 
 // After a handoff changes, re-read the counts (one row is enough).
 async function refreshCounts() {
   try {
-    const c = await listChats({ limit: 1, view: tab.value })
+    const c = await listChats({ limit: 1, view: tab.value, q: query() })
     if (c.counts) serverCounts.value = c.counts
     if (typeof c.total === 'number') total.value = c.total
     syncNavCounts()
@@ -92,9 +106,11 @@ async function refreshCounts() {
 // API; without one, only when the whole list is loaded (a partial count lies).
 const navBadges = useNavBadges()
 function syncNavCounts() {
-  const all = serverCounts.value?.all ?? (tab.value === 'all' ? total.value : undefined)
-  if (all !== undefined) navBadges.set('/assistant/chats', all > 99 ? '99+' : all)
-  else if (!nextCursor.value) navBadges.set('/assistant/chats', chats.value.length)
+  if (!query()) { // a search narrows the counts; the menu keeps the full one
+    const all = serverCounts.value?.all ?? (tab.value === 'all' ? total.value : undefined)
+    if (all !== undefined) navBadges.set('/assistant/chats', all > 99 ? '99+' : all)
+    else if (!nextCursor.value) navBadges.set('/assistant/chats', chats.value.length)
+  }
   navBadges.set('/assistant/handoffs', handoffs.value.filter(h => h.status === 'pending').length)
 }
 
