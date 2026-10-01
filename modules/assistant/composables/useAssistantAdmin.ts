@@ -27,6 +27,12 @@ import type {
  * loading/error state.
  */
 export function useAssistantAdmin() {
+  // A multi-brand admin (useChannel from the base layer) lists the picked
+  // brand's chats and handoffs — the pages showed every tenant mixed.
+  const { selected: pickedChannel } = useChannel()
+  const withTenant = <T extends { tenant?: string }>(f: T): T =>
+    (f.tenant === undefined && pickedChannel.value ? { ...f, tenant: pickedChannel.value } : f)
+
   function qs(params: Record<string, string | number | undefined>): string {
     const p = new URLSearchParams()
     for (const [k, v] of Object.entries(params)) {
@@ -38,7 +44,7 @@ export function useAssistantAdmin() {
 
   async function listChats(filters: ChatListFilters = {}): Promise<CursorPage<AssistantChat>> {
     return $apiFetch<CursorPage<AssistantChat>>(
-      `/api/v1/admin/assistant/chats${qs(filters as Record<string, any>)}`,
+      `/api/v1/admin/assistant/chats${qs(withTenant(filters) as Record<string, any>)}`,
     )
   }
 
@@ -51,7 +57,7 @@ export function useAssistantAdmin() {
 
   async function listHandoffs(filters: HandoffListFilters = {}): Promise<CursorPage<AssistantHandoff>> {
     return $apiFetch<CursorPage<AssistantHandoff>>(
-      `/api/v1/admin/assistant/handoffs${qs(filters as Record<string, any>)}`,
+      `/api/v1/admin/assistant/handoffs${qs(withTenant(filters) as Record<string, any>)}`,
     )
   }
 
