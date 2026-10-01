@@ -59,6 +59,8 @@ export interface AssistantHandoff {
 }
 
 export interface ChatListFilters {
+  /** Brand / tenant code; defaults to the admin's picked channel (useChannel). '' = all. */
+  tenant?: string
   userId?: string
   flowId?: string
   variantLabel?: string
@@ -67,6 +69,8 @@ export interface ChatListFilters {
 }
 
 export interface HandoffListFilters {
+  /** Brand / tenant code; defaults to the admin's picked channel (useChannel). '' = all. */
+  tenant?: string
   status?: HandoffStatus
   limit?: number
   cursor?: string
